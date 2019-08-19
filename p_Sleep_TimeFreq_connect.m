@@ -102,7 +102,7 @@ for subj = 1:length(subjectFiles)
     end
     
     for s_scout = 1:numel(scouts)
-        [MeanTrialSpectra(s_scout,subj,:,:), v_TimeAxis,v_FreqAxis,...
+        [MeanTrialSpectraOdor(s_scout,subj,:,:), v_TimeAxis,v_FreqAxis,...
             DeltaPower(s_scout,subj,:), ThetaPower(s_scout,subj,:),...
             AlphaPower(s_scout,subj,:),SpindlePower(s_scout,subj,:),...
             BetaPower(s_scout,subj,:)] = ...
@@ -110,34 +110,117 @@ for subj = 1:length(subjectFiles)
             s_baselineEndTime,s_TimeBeforeCero,ChanVsSource);
     end
     
-    [CohNorm(subj,:,:,:,:),DeltaPowerCoh(subj,:,:,:),ThetaPowerCoh(subj,:,:,:),...
-        AlphaPowerCoh(subj,:,:,:),SpindlePowerCoh(subj,:,:,:),...
-        BetaPowerCoh(subj,:,:,:),v_TimeAxisCoh,v_FreqAxisCoh]= ...
+    [CohNormOdor(subj,:,:,:,:),DeltaPowerCohOdor(subj,:,:,:),...
+        ThetaPowerCohOdor(subj,:,:,:),...
+        AlphaPowerCohOdor(subj,:,:,:),SpindlePowerCohOdor(subj,:,:,:),...
+        BetaPowerCohOdor(subj,:,:,:),v_TimeAxisCoh,v_FreqAxisCoh]= ...
         f_Connectivity(scouts,DataOdor,file,"Odor",s_TimeBeforeCero,...
         s_baselineStartTime,s_baselineEndTime,ChanVsSource); 
 end
 
-%% Mean and plots
+%% Mean and plots Odor condition
 
 % -----Plot spectra per scout-------
 
-MeanSubjectsSpectra = squeeze(permute(mean(MeanTrialSpectra,2),[2,1,3,4]));
+MeanSubjectsSpectraOdor = squeeze(permute(mean(MeanTrialSpectraOdor,2),[2,1,3,4]));
 
 for s_scout = 1:numel(scouts)
     figure;
-    pcolor(v_TimeAxis, v_FreqAxis, squeeze(MeanSubjectsSpectra(s_scout,:,:))); 
+    pcolor(v_TimeAxis, v_FreqAxis, squeeze(MeanSubjectsSpectraOdor(s_scout,:,:))); 
     xlim([s_baselineStartTime, v_TimeAxis(end)])
     colorbar; colormap('jet'); shading interp;
     title(strcat(scouts(s_scout),'__ Odor'))
     vline(0, 'r')
 end
 
-MeanSubjectsCohNorm = squeeze(mean(CohNorm,1));
+MeanSubjectsCohNormOdor = squeeze(mean(CohNormOdor,1));
 
 for scout = 1:numel(scouts)
     for scout2 = 1:numel(scouts)
         if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))
             Coherence = squeeze(squeeze(MeanSubjectsCohNorm(scout,scout2,:,:)));
+            figure
+            pcolor(v_TimeAxisCoh, v_FreqAxisCoh, Coherence);
+            xlim([s_baselineStartTime, v_TimeAxis(end)])
+            colorbar; colormap('jet'); shading interp;
+            title(strcat(scouts(scout),'vs',scouts(scout2),'__ Odor'))
+            vline(0, 'r')
+        end
+    end
+end
+
+
+%% Loading Placebo sets into memory
+
+for Load2Mem = 1:numel(FilesList)
+    if strcmp(ChanVsSource,'Channel')
+        subjectFiles{Load2Mem,1} = load([pathNameChan FilesListChanPlacebo(Load2Mem).name]);
+    else
+        subjectFiles{Load2Mem,1} = load([pathNameSource FilesListSourcePlacebo(Load2Mem).name]);
+    end
+end
+
+%% Placebo datasets
+
+for subj = 1:length(subjectFiles)
+    
+    switch ChanVsSource
+        case 'Channel'
+            %Set up datasets containing channel data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            file = load(FilesListChanPlacebo(subj).name);
+            s_NumChannels = length(file.Channel.number);
+            v_Time = file.Channel.times;
+            s_Trials = file.Channel.trials;
+            DataPlacebo = double(file.Channel.data);
+            
+        case 'Source'
+            %Set up datasets containing source data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            file = subjectFiles{subj};
+            s_NumScouts = length(file.Atlas.Scouts); % Detect the number of scouts
+            v_Time = file.Time(1:s_TimeSam);
+            s_Trials = size(file.Value,2)/s_TimeSam;
+            DataPlacebo = reshape(file.Value,[s_NumScouts,s_TimeSam,s_Trials]);
+    end
+    
+    for s_scout = 1:numel(scouts)
+        [MeanTrialSpectraPlac(s_scout,subj,:,:), v_TimeAxis,v_FreqAxis,...
+            DeltaPower(s_scout,subj,:), ThetaPower(s_scout,subj,:),...
+            AlphaPower(s_scout,subj,:),SpindlePower(s_scout,subj,:),...
+            BetaPower(s_scout,subj,:)] = ...
+            f_Multitaper_ROI(DataPlacebo,file,scouts(s_scout),s_baselineStartTime,...
+            s_baselineEndTime,s_TimeBeforeCero,ChanVsSource);
+    end
+    
+    [CohNormPlac(subj,:,:,:,:),DeltaPowerCohPlac(subj,:,:,:),...
+        ThetaPowerCohPlac(subj,:,:,:),...
+        AlphaPowerCohPlac(subj,:,:,:),SpindlePowerCohPlac(subj,:,:,:),...
+        BetaPowerCohPlac(subj,:,:,:),v_TimeAxisCoh,v_FreqAxisCoh]= ...
+        f_Connectivity(scouts,DataPlacebo,file,"Placebo",s_TimeBeforeCero,...
+        s_baselineStartTime,s_baselineEndTime,ChanVsSource); 
+end
+
+%% Mean and plots Placebo condition
+
+% -----Plot spectra per scout-------
+
+MeanSubjectsSpectraPlacebo = ...
+    squeeze(permute(mean(MeanTrialSpectraPlac,2),[2,1,3,4]));
+
+for s_scout = 1:numel(scouts)
+    figure;
+    pcolor(v_TimeAxis, v_FreqAxis, squeeze(MeanSubjectsSpectraPlacebo(s_scout,:,:))); 
+    xlim([s_baselineStartTime, v_TimeAxis(end)])
+    colorbar; colormap('jet'); shading interp;
+    title(strcat(scouts(s_scout),'__ Odor'))
+    vline(0, 'r')
+end
+
+MeanSubjectsCohNormPlac = squeeze(mean(CohNormPlac,1));
+
+for scout = 1:numel(scouts)
+    for scout2 = 1:numel(scouts)
+        if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))
+            Coherence = squeeze(squeeze(MeanSubjectsCohNormPlac(scout,scout2,:,:)));
             figure
             pcolor(v_TimeAxisCoh, v_FreqAxisCoh, Coherence);
             xlim([s_baselineStartTime, v_TimeAxis(end)])
