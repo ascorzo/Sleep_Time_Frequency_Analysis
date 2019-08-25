@@ -6,6 +6,7 @@ s_TimeSam = s_TotalTimeSec * s_fs; %total time in samples
 s_baselineStartTime = -7;
 s_baselineEndTime = 0;
 s_TimeBeforeCero = 15;
+s_TimeAfterCero = 15;
 
 %% Set up user land
 % Normally not needed to add slash to end of folder paths. But necessary in
@@ -20,7 +21,6 @@ end
 ChanVsSource = questdlg('Import channel recording data or source-computed cortex data?', ...
     'Channel or Source?', ...
     'Channel','Source','Channel');
-
 %% Create a Files List in order to go through them for the analysis
 
 switch ChanVsSource
@@ -62,18 +62,16 @@ end
 if strcmp(ChanVsSource,'Channel')
     FileTemp = load(FilesListChanOdor(1).name);
     Sources = FileTemp.Channel.label;
-    %Asks for selection of a channel to detect the Slow Oscillations and
-    %assigns to str_ChanSO
-    [indx,tf] = listdlg('PromptString','Select a source: for Slow Oscillations',...
+    %Asks for selection of multiple channels or sources to calculate the connectivity 
+    [indx,tf] = listdlg('PromptString','Select channels to analyze:',...
         'ListSize',[400 400],...
         'ListString',Sources);
     scouts = Sources(indx);  
 else
     FileTemp = subjectFiles{1};
     Sources = string({FileTemp.Atlas.Scouts.Label});
-    %Asks for selection of a region to detect the Slow Oscillations and
-    %assigns to str_ROI_SO
-    [indx,tf] = listdlg('PromptString','Select a source for Slow Oscillations:',...
+    %Asks for selection of multiple channels or sources to calculate the connectivity
+    [indx,tf] = listdlg('PromptString','Select sources to analyze:',...
         'ListSize',[400 400],...
         'ListString',Sources);
     scouts = Sources(indx);
@@ -120,35 +118,44 @@ end
 
 %% Mean and plots Odor condition
 
-% -----Plot spectra per scout-------
-
+% % -----Plot spectra per scout-------
+% 
 MeanSubjectsSpectraOdor = squeeze(permute(mean(MeanTrialSpectraOdor,2),[2,1,3,4]));
-
-for s_scout = 1:numel(scouts)
-    figure;
-    pcolor(v_TimeAxis, v_FreqAxis, squeeze(MeanSubjectsSpectraOdor(s_scout,:,:))); 
-    xlim([s_baselineStartTime, v_TimeAxis(end)])
-    colorbar; colormap('jet'); shading interp;
-    title(strcat(scouts(s_scout),'__ Odor'))
-    vline(0, 'r')
-end
-
+% 
+% % for s_scout = 1:numel(scouts)
+% %     figure;
+% %     pcolor(v_TimeAxis, v_FreqAxis, squeeze(MeanSubjectsSpectraOdor(s_scout,:,:))); 
+% %     xlim([s_baselineStartTime, v_TimeAxis(end)])
+% %     colorbar; colormap('jet'); shading interp;
+% %     title(strcat(scouts(s_scout),'__ Odor'))
+% %     vline(0, 'r')
+% % end
+% 
 MeanSubjectsCohNormOdor = squeeze(mean(CohNormOdor,1));
+MeanSubjectBetaCohOdor = squeeze(mean(BetaPowerCohOdor,1));
+MeanSubjectSpindlesCohOdor = squeeze(mean(SpindlePowerCohOdor,1));
 
-for scout = 1:numel(scouts)
-    for scout2 = 1:numel(scouts)
-        if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))
-            Coherence = squeeze(squeeze(MeanSubjectsCohNorm(scout,scout2,:,:)));
-            figure
-            pcolor(v_TimeAxisCoh, v_FreqAxisCoh, Coherence);
-            xlim([s_baselineStartTime, v_TimeAxis(end)])
-            colorbar; colormap('jet'); shading interp;
-            title(strcat(scouts(scout),'vs',scouts(scout2),'__ Odor'))
-            vline(0, 'r')
-        end
-    end
-end
-
+% 
+% for scout = 1:numel(scouts)
+%     for scout2 = 1:numel(scouts)
+%         if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))
+%             Coherence = squeeze(squeeze(MeanSubjectsCohNormOdor(scout,scout2,:,:)));
+% %             figure
+% %             pcolor(v_TimeAxisCoh, v_FreqAxisCoh, Coherence);
+% %             xlim([s_baselineStartTime, v_TimeAxis(end)])
+% %             colorbar; colormap('jet'); shading interp;
+% %             title(strcat(scouts(scout),'vs',scouts(scout2),'__ Odor'))
+% %             vline(0, 'r')
+%             
+%             figure 
+%             plot(v_TimeAxisCoh,squeeze(MeanSubjectBetaCohOdor(scout,scout2,:)),'m')
+%             hold on
+%             plot(v_TimeAxisCoh,squeeze(MeanSubjectSpindlesCohOdor(scout,scout2,:)),'b')
+%             title(strcat(scouts(scout),'vs',scouts(scout2),'__ Odor'))
+%             vline(0, 'r')
+%         end
+%     end
+% end
 
 %% Loading Placebo sets into memory
 
@@ -206,28 +213,81 @@ end
 MeanSubjectsSpectraPlacebo = ...
     squeeze(permute(mean(MeanTrialSpectraPlac,2),[2,1,3,4]));
 
-for s_scout = 1:numel(scouts)
-    figure;
-    pcolor(v_TimeAxis, v_FreqAxis, squeeze(MeanSubjectsSpectraPlacebo(s_scout,:,:))); 
-    xlim([s_baselineStartTime, v_TimeAxis(end)])
-    colorbar; colormap('jet'); shading interp;
-    title(strcat(scouts(s_scout),'__ Odor'))
-    vline(0, 'r')
-end
-
+% for s_scout = 1:numel(scouts)
+%     figure;
+%     pcolor(v_TimeAxis, v_FreqAxis, squeeze(MeanSubjectsSpectraPlacebo(s_scout,:,:))); 
+%     xlim([s_baselineStartTime, v_TimeAxis(end)])
+%     colorbar; colormap('jet'); shading interp;
+%     title(strcat(scouts(s_scout),'__ Placebo'))
+%     vline(0, 'r')
+% end
+% 
 MeanSubjectsCohNormPlac = squeeze(mean(CohNormPlac,1));
+MeanSubjectBetaCohPlac = squeeze(mean(BetaPowerCohPlac,1));
+MeanSubjectSpindlesCohPlac = squeeze(mean(SpindlePowerCohPlac,1));
+
+% for scout = 1:numel(scouts)
+%     for scout2 = 1:numel(scouts)
+%         if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))
+%             Coherence = squeeze(squeeze(MeanSubjectsCohNormPlac(scout,scout2,:,:)));
+%             figure
+%             pcolor(v_TimeAxisCoh, v_FreqAxisCoh, Coherence);
+%             xlim([s_baselineStartTime, v_TimeAxis(end)])
+%             colorbar; colormap('jet'); shading interp;
+%             title(strcat(scouts(scout),'vs',scouts(scout2),'__ Placebo'))
+%             vline(0, 'r')
+%             
+%             figure 
+%             plot(v_TimeAxisCoh,squeeze(MeanSubjectBetaCohPlac(scout,scout2,:)),'m')
+%             hold on
+%             plot(v_TimeAxisCoh,squeeze(MeanSubjectSpindlesCohPlac(scout,scout2,:)),'b')
+%             title(strcat(scouts(scout),'vs',scouts(scout2),'__ Placebo'))
+%             vline(0, 'r')
+%         end
+%     end
+% end
+
+
+%% Plots together
 
 for scout = 1:numel(scouts)
     for scout2 = 1:numel(scouts)
-        if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))
-            Coherence = squeeze(squeeze(MeanSubjectsCohNormPlac(scout,scout2,:,:)));
-            figure
-            pcolor(v_TimeAxisCoh, v_FreqAxisCoh, Coherence);
-            xlim([s_baselineStartTime, v_TimeAxis(end)])
-            colorbar; colormap('jet'); shading interp;
-            title(strcat(scouts(scout),'vs',scouts(scout2),'__ Odor'))
+        if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))            
+            figure 
+            
+            subplot(2,1,1)
+            shadedErrorBar(v_TimeAxisCoh,...
+                squeeze(permute(BetaPowerCohOdor(:,scout,scout2,:),[2,3,1,4])),...
+                {@mean,@std},'lineprops', '-r');
+            %plot(v_TimeAxisCoh,squeeze(MeanSubjectBetaCohPlac(scout,scout2,:)),'m')
+            hold on
+            shadedErrorBar(v_TimeAxisCoh,...
+                squeeze(permute(BetaPowerCohPlac(:,scout,scout2,:),[2,3,1,4])),...
+                {@mean,@std},'lineprops', '-b');
+            %plot(v_TimeAxisCoh,squeeze(MeanSubjectBetaCohOdor(scout,scout2,:)),'b')     
             vline(0, 'r')
+            title('Beta')
+            xlim([s_baselineStartTime s_TimeAfterCero])
+            legend('Placebo','Odor')
+            
+            subplot(2,1,2)
+            shadedErrorBar(v_TimeAxisCoh,...
+                squeeze(permute(SpindlePowerCohOdor(:,scout,scout2,:),[2,3,1,4])),...
+                {@mean,@std},'lineprops', '-r');
+            %plot(v_TimeAxisCoh,squeeze(MeanSubjectSpindlesCohPlac(scout,scout2,:)),'m')
+            hold on
+            shadedErrorBar(v_TimeAxisCoh,...
+                squeeze(permute(SpindlePowerCohPlac(:,scout,scout2,:),[2,3,1,4])),...
+                {@mean,@std},'lineprops', '-b');
+            %plot(v_TimeAxisCoh,squeeze(MeanSubjectSpindlesCohOdor(scout,scout2,:)),'b')
+            vline(0, 'r')
+            title('Spindles')
+            xlim([s_baselineStartTime s_TimeAfterCero])
+            legend('Placebo','Odor')
+            
+            ROI1 = scouts(scout); ROI2 = scouts(scout2);
+            ROI1 = strrep(ROI1,'_','\_'); ROI2 = strrep(ROI2,'_','\_'); 
+            suptitle(strcat(ROI1,{' vs '},ROI2))
         end
     end
 end
-

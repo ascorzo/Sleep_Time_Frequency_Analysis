@@ -49,7 +49,7 @@ for scout = 1:numel(scouts)
             [~, idx1] = min(abs(v_TimeAxis - s_baselineStart));
             [~, idx2] = min(abs(v_TimeAxis - s_baselineEnd));
             
-            Mean_Coh= repmat(median(Coh(:,idx1:idx2),2),[1, size(Coh,2)]);
+            Mean_Coh= repmat(mean(Coh(:,idx1:idx2),2),[1, size(Coh,2)]);
             CohNorm = Coh./Mean_Coh;
             
             
