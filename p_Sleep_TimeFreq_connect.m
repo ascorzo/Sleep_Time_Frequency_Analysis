@@ -55,7 +55,6 @@ for Load2Mem = 1:numel(FilesList)
         subjectFiles{Load2Mem,1} = load([pathNameSource FilesListSourceOdor(Load2Mem).name]);
     end
 end
- 
 
 %% Select Which areas to compare 
 
@@ -250,8 +249,8 @@ MeanSubjectSpindlesCohPlac = squeeze(mean(SpindlePowerCohPlac,1));
 
 %% Plots together
 
-for scout = 1:numel(scouts)
-    for scout2 = 1:numel(scouts)
+for scout = 1:3%numel(scouts)
+    for scout2 = 1:3%numel(scouts)
         if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))            
             figure 
             
