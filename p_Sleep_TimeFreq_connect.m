@@ -1,6 +1,6 @@
 % Define some important variables
 s_TotalTimeSec = 30; %total number of seconds we are analysing 
-s_fs = 1000; % sample frequency
+s_fs = 1000; % sample frequencyh
 s_TimeSam = s_TotalTimeSec * s_fs; %total time in samples
 
 s_baselineStartTime = -7;
@@ -55,6 +55,7 @@ for Load2Mem = 1:numel(FilesList)
         subjectFiles{Load2Mem,1} = load([pathNameSource FilesListSourceOdor(Load2Mem).name]);
     end
 end
+ 
 
 %% Select Which areas to compare 
 
@@ -248,24 +249,26 @@ MeanSubjectSpindlesCohPlac = squeeze(mean(SpindlePowerCohPlac,1));
 
 
 %% Plots together
+addpath('/home/andrea/Documents/MatlabFunctions/functions')
 
-for scout = 1:3%numel(scouts)
-    for scout2 = 1:3%numel(scouts)
+for scout = 1:numel(scouts)
+    
+    for scout2 = 45:46
         if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))            
             figure 
             
             subplot(2,1,1)
             shadedErrorBar(v_TimeAxisCoh,...
-                squeeze(permute(BetaPowerCohOdor(:,scout,scout2,:),[2,3,1,4])),...
+                squeeze(permute(DeltaPowerCohOdor(:,scout,scout2,:),[2,3,1,4])),...
                 {@mean,@std},'lineprops', '-r');
             %plot(v_TimeAxisCoh,squeeze(MeanSubjectBetaCohPlac(scout,scout2,:)),'m')
             hold on
             shadedErrorBar(v_TimeAxisCoh,...
-                squeeze(permute(BetaPowerCohPlac(:,scout,scout2,:),[2,3,1,4])),...
+                squeeze(permute(DeltaPowerCohPlac(:,scout,scout2,:),[2,3,1,4])),...
                 {@mean,@std},'lineprops', '-b');
             %plot(v_TimeAxisCoh,squeeze(MeanSubjectBetaCohOdor(scout,scout2,:)),'b')     
             vline(0, 'r')
-            title('Beta')
+            title('Delta')
             xlim([s_baselineStartTime s_TimeAfterCero])
             legend('Placebo','Odor')
             
