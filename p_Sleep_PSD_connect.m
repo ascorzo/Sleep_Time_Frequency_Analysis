@@ -86,7 +86,8 @@ for subj = 1:length(FilesListSourceOdor)
             s_NumScouts = length(file.Atlas.Scouts); % Detect the number of scouts
             v_Time = file.Time(1:s_TimeSam);
             s_Trials = size(file.Value,2)/s_TimeSam;
-            DataOdor = reshape(file.Value,[s_NumScouts,s_TimeSam,s_Trials]);
+            DataOdor = reshape(file.Value,[s_NumScouts,s_Trials,s_TimeSam]);
+            DataOdor = permute(DataOdor,[1,3,2]);
     end
    
    [CodorOn(subj,:,:,:),CodorOff(subj,:,:,:),...
@@ -114,10 +115,11 @@ for subj = 1:length(FilesListSourcePlacebo)
             s_NumScouts = length(file.Atlas.Scouts); % Detect the number of scouts
             v_Time = file.Time(1:s_TimeSam);
             s_Trials = size(file.Value,2)/s_TimeSam;
-            DataPlacebo = reshape(file.Value,[s_NumScouts,s_TimeSam,s_Trials]);
+            DataPlacebo = reshape(file.Value,[s_NumScouts,s_Trials,s_TimeSam]);
+            DataPlacebo = permute(DataPlacebo,[1,3,2]);
     end
        
     [CPlacOn(subj,:,:,:),CPlacOff(subj,:,:,:),...
         PSD_PlacOn(subj,:,:),PSD_PlacOff(subj,:,:),v_FreqAxis] = ...
-    f_PSD_Connectivity(scouts,DataOdor,Sources,s_TimeBeforeCero,s_fs);
+    f_PSD_Connectivity(scouts,DataPlacebo,Sources,s_TimeBeforeCero,s_fs);
 end
