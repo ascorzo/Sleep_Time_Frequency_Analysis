@@ -120,9 +120,9 @@ if ~exist('subjectFilesOdor','var') || ...
                         scouts(i);
                 elseif i > numel(scouts)
                     subjectFilesOdor{Load2Mem, 1}.Atlas.Scouts(i).Label = ...
-                        'empty'; % Not sure if this is needed, but it seemed your
-                    % f_Multitaper_ROI is not s_ROI = strcmp({file.Atlas.Scouts.Label},str_ROI)
-                    % correctly in line 8 otherwise.
+                        'empty'; % This is important because otherwise, your
+                    % multitaper is not s_ROI = strcmp({file.Atlas.Scouts.Label},str_ROI)
+                    % correctly in line 8.
                 end
             end
             
@@ -358,10 +358,9 @@ addpath(strcat(pwd, slashSys, 'raacampbell-shadedErrorBar-9b19a7b'))
 
 for scout = 1:numel(scouts)
     
-%     for scout2 = 45:46
-    for scout2 = 1:numel(scouts) 
+    for scout2 = 45:46
         if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))            
-            figure
+            figure 
             
             subplot(2,1,1)
             shadedErrorBar(v_TimeAxisCoh,...
