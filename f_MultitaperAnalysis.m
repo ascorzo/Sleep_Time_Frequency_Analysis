@@ -5,7 +5,7 @@ function [MeanSpectra,v_TimeAxis, v_FreqAxis]= ...
 if strcmp(ChanVsSource,'Channel')
     s_ROI = find(strcmp(file.Channel.label, str_ROI));
 else
-    s_ROI = strcmp({file.Atlas.Scouts.Label},str_ROI);
+    s_ROI = strcmp([file.Atlas.Scouts.Label],str_ROI); % curly braces broke strcmp
 end
    
 %% Set default parameters

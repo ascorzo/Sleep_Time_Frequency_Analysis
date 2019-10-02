@@ -33,7 +33,9 @@ switch ChanVsSource
             FilesListChanOdor = dir([pathNameChan,'*Odor.mat']);
             FilesListChanPlacebo = dir([pathNameChan,'*Placebo.mat']);
             
-            FilesList = FilesListChanOdor;
+            FilesListOdor = FilesListChanOdor;
+            FilesListPlacebo = FilesListChanPlacebo;
+            dataPath = pathNameChan;
         end
     case 'Source'
         if  ~exist('pathNameSource','var') || size(pathNameSource,2) < 3 
@@ -43,43 +45,97 @@ switch ChanVsSource
             FilesListSourceOdor = dir([pathNameSource,'*Odor.mat']);
             FilesListSourcePlacebo = dir([pathNameSource,'*Placebo.mat']);
             
-            FilesList = FilesListSourceOdor;
+            FilesListOdor = FilesListSourceOdor;
+            FilesListPlacebo = FilesListSourcePlacebo;
+            dataPath = pathNameSource;
         end
 end
-%% Loading Odor sets into memory
-
-for Load2Mem = 1:numel(FilesList)
-    if strcmp(ChanVsSource,'Channel')
-        subjectFiles{Load2Mem,1} = load([pathNameChan FilesListChanOdor(Load2Mem).name]);
-    else
-        subjectFiles{Load2Mem,1} = load([pathNameSource FilesListSourceOdor(Load2Mem).name]);
-    end
-end
- 
 
 %% Select Which areas to compare 
-
-if strcmp(ChanVsSource,'Channel')
-    FileTemp = load(FilesListChanOdor(1).name);
-    Sources = FileTemp.Channel.label;
-    %Asks for selection of multiple channels or sources to calculate the connectivity 
-    [indx,tf] = listdlg('PromptString','Select channels to analyze:',...
-        'ListSize',[400 400],...
-        'ListString',Sources);
-    scouts = Sources(indx);  
-else
-    FileTemp = subjectFiles{1};
-    Sources = string({FileTemp.Atlas.Scouts.Label});
-    %Asks for selection of multiple channels or sources to calculate the connectivity
-    [indx,tf] = listdlg('PromptString','Select sources to analyze:',...
-        'ListSize',[400 400],...
-        'ListString',Sources);
-    scouts = Sources(indx);
+% Only if needed
+if ~exist('scouts','var') || isempty(scouts)
+    FileTemp = load(strcat(dataPath, FilesListOdor(1).name));
+    
+    if strcmp(ChanVsSource,'Channel')
+        Sources = FileTemp.Channel.label;
+        %Asks for selection of multiple channels or sources to calculate the connectivity
+        [indx,tf] = listdlg('PromptString','Select channels to analyze:',...
+            'ListSize',[400 400],...
+            'ListString',Sources);
+        scouts = Sources(indx);
+    else
+        Sources = {FileTemp.Atlas.Scouts.Label}; % Before, it was converted to string which breaks the strcmp later
+        %Asks for selection of multiple channels or sources to calculate the connectivity
+        [indx,tf] = listdlg('PromptString','Select sources to analyze:',...
+            'ListSize',[400 400],...
+            'ListString',Sources);
+        scouts = Sources(indx);
+    end
 end
+
+%% Loading Odor sets into memory
+% Load data only if not already
+if ~exist('subjectFilesOdor','var') || ...
+        numel(FilesListOdor) ~= length(subjectFilesOdor)
+    
+    for Load2Mem = 1:numel(FilesListOdor)
+        if strcmp(ChanVsSource,'Channel')
+            subjectFilesOdor{Load2Mem,1} = ...
+                load([pathNameChan FilesListChanOdor(Load2Mem).name]);
+        else
+%             subjectFilesOdor{Load2Mem,1} = ...
+%                 load([pathNameSource FilesListSourceOdor(Load2Mem).name]);
+            
+            % creating matfiles that can access file information without
+            % actually storing the file
+            matfiles_subjectFilesOdor{Load2Mem,1} = matfile([pathNameSource FilesListSourceOdor(Load2Mem).name]);
+                        
+            % Loads everything except 'Value' field. This field is the
+            % heavy part of the files. Later, only needed data will be
+            % loaded.
+            subjectFilesOdor{Load2Mem,1} = load(matfiles_subjectFilesOdor{Load2Mem,1}.Properties.Source,...
+                '-regexp', '^(?!Value)\w');
+            
+            % load necessary scout data
+            for i = 1:numel(scouts)
+                idx_ROI = find(strcmp(scouts(i),...
+                    {subjectFilesOdor{Load2Mem, 1}.Atlas.Scouts.Label}));
+            
+                subjectFilesOdor{Load2Mem,1}.Value(i,:) = ...
+                    matfiles_subjectFilesOdor{Load2Mem,1}.Value(idx_ROI,:);
+            end
+            
+            % This is combersome, but allows not to break your following
+            % codes and functions.
+            % The idea is that:
+            % - subjectFilesOdor.Value is a (numel(scouts) x s_TimeSam)
+            % matrix
+            % - subjectFilesOdor.Atlas.Scouts.Label contain only the loaded
+            % ROIs, the rest being empty
+            subjectFilesOdor{Load2Mem, 1}.Atlas.Scouts = rmfield(subjectFilesOdor{Load2Mem, 1}.Atlas.Scouts,'Label');
+            
+            for i = 1:length(subjectFilesOdor{Load2Mem, 1}.Atlas.Scouts)
+                if i <= numel(scouts)
+                    subjectFilesOdor{Load2Mem, 1}.Atlas.Scouts(i).Label = ...
+                        scouts(i);
+                elseif i > numel(scouts)
+                    subjectFilesOdor{Load2Mem, 1}.Atlas.Scouts(i).Label = ...
+                        'empty'; % Not sure if this is needed, but it seemed your
+                    % f_Multitaper_ROI is not s_ROI = strcmp({file.Atlas.Scouts.Label},str_ROI)
+                    % correctly in line 8 otherwise.
+                end
+            end
+            
+        end
+    end
+
+end
+
+pause(0.1) % Allow workspace to update
 
 %% Odor datasets
 
-for subj = 1:length(subjectFiles)
+for subj = 1:length(subjectFilesOdor)
     
     switch ChanVsSource
         case 'Channel'
@@ -92,8 +148,8 @@ for subj = 1:length(subjectFiles)
             
         case 'Source'
             %Set up datasets containing source data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            file = subjectFiles{subj};
-            s_NumScouts = length(file.Atlas.Scouts); % Detect the number of scouts
+            file = subjectFilesOdor{subj};
+            s_NumScouts = numel(scouts);
             v_Time = file.Time(1:s_TimeSam);
             s_Trials = size(file.Value,2)/s_TimeSam;
             DataOdor = reshape(file.Value,[s_NumScouts,s_TimeSam,s_Trials]);
@@ -158,18 +214,66 @@ MeanSubjectSpindlesCohOdor = squeeze(mean(SpindlePowerCohOdor,1));
 % end
 
 %% Loading Placebo sets into memory
+% Load data only if not already
+if ~exist('subjectFilesPlacebo','var') || ...
+        numel(FilesListPlacebo) ~= length(subjectFilesPlacebo)
+    
+    for Load2Mem = 1:numel(FilesListPlacebo)
+        if strcmp(ChanVsSource,'Channel')            
+            subjectFilesPlacebo{Load2Mem,1} = ...
+                load([pathNameChan FilesListChanPlacebo(Load2Mem).name]);
+        else
+%             subjectFilesPlacebo{Load2Mem,1} = ...
+%                 load([pathNameSource FilesListSourcePlacebo(Load2Mem).name]);
 
-for Load2Mem = 1:numel(FilesList)
-    if strcmp(ChanVsSource,'Channel')
-        subjectFiles{Load2Mem,1} = load([pathNameChan FilesListChanPlacebo(Load2Mem).name]);
-    else
-        subjectFiles{Load2Mem,1} = load([pathNameSource FilesListSourcePlacebo(Load2Mem).name]);
+            % creating matfiles that can access file information without
+            % actually storing the file
+            matfiles_subjectFilesPlacebo{Load2Mem,1} = matfile([pathNameSource FilesListSourcePlacebo(Load2Mem).name]);
+                        
+            % Loads everything except 'Value' field. This field is the
+            % heavy part of the files. Later, only needed data will be
+            % loaded.
+            subjectFilesPlacebo{Load2Mem,1} = load(matfiles_subjectFilesPlacebo{Load2Mem,1}.Properties.Source,...
+                '-regexp', '^(?!Value)\w');
+            
+            % load necessary scout data
+            for i = 1:numel(scouts)
+                idx_ROI = find(strcmp(scouts(i),...
+                    {subjectFilesPlacebo{Load2Mem, 1}.Atlas.Scouts.Label}));
+            
+                subjectFilesPlacebo{Load2Mem,1}.Value(i,:) = ...
+                    matfiles_subjectFilesPlacebo{Load2Mem,1}.Value(idx_ROI,:);
+            end
+            
+            % This is combersome, but allows not to break your following
+            % codes and functions.
+            % The idea is that:
+            % - subjectFilesOdor.Value is a (numel(scouts) x s_TimeSam)
+            % matrix
+            % - subjectFilesOdor.Atlas.Scouts.Label contain only the loaded
+            % ROIs, the rest being empty
+            subjectFilesPlacebo{Load2Mem, 1}.Atlas.Scouts = rmfield(subjectFilesPlacebo{Load2Mem, 1}.Atlas.Scouts,'Label');
+            
+            for i = 1:length(subjectFilesPlacebo{Load2Mem, 1}.Atlas.Scouts)
+                if i <= numel(scouts)
+                    subjectFilesPlacebo{Load2Mem, 1}.Atlas.Scouts(i).Label = ...
+                        scouts(i);
+                elseif i > numel(scouts)
+                    subjectFilesPlacebo{Load2Mem, 1}.Atlas.Scouts(i).Label = ...
+                        'empty'; % This is important because otherwise, your
+                    % multitaper is not s_ROI = strcmp({file.Atlas.Scouts.Label},str_ROI)
+                    % correctly in line 8.
+                end
+            end
+            
+        end
     end
+
 end
 
 %% Placebo datasets
 
-for subj = 1:length(subjectFiles)
+for subj = 1:length(subjectFilesPlacebo)
     
     switch ChanVsSource
         case 'Channel'
@@ -182,8 +286,8 @@ for subj = 1:length(subjectFiles)
             
         case 'Source'
             %Set up datasets containing source data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            file = subjectFiles{subj};
-            s_NumScouts = length(file.Atlas.Scouts); % Detect the number of scouts
+            file = subjectFilesPlacebo{subj};
+            s_NumScouts = numel(scouts); % Detect the number of scouts
             v_Time = file.Time(1:s_TimeSam);
             s_Trials = size(file.Value,2)/s_TimeSam;
             DataPlacebo = reshape(file.Value,[s_NumScouts,s_TimeSam,s_Trials]);
@@ -249,13 +353,15 @@ MeanSubjectSpindlesCohPlac = squeeze(mean(SpindlePowerCohPlac,1));
 
 
 %% Plots together
-addpath('/home/andrea/Documents/MatlabFunctions/functions')
+% addpath('/home/andrea/Documents/MatlabFunctions/functions')
+addpath(strcat(pwd, slashSys, 'raacampbell-shadedErrorBar-9b19a7b'))
 
 for scout = 1:numel(scouts)
     
-    for scout2 = 45:46
+%     for scout2 = 45:46
+    for scout2 = 1:numel(scouts) 
         if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))            
-            figure 
+            figure
             
             subplot(2,1,1)
             shadedErrorBar(v_TimeAxisCoh,...
