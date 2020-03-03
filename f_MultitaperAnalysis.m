@@ -3,7 +3,7 @@ function [MeanSpectra,v_TimeAxis, v_FreqAxis]= ...
     s_TimeBeforeCero,ChanVsSource)
 
 if strcmp(ChanVsSource,'Channel')
-    s_ROI = find(strcmp(file.Channel.label, str_ROI));
+    s_ROI = find(strcmp(file.Channel.Labels, str_ROI));
 else
     s_ROI = strcmp({file.Atlas.Scouts.Label},str_ROI);
 end

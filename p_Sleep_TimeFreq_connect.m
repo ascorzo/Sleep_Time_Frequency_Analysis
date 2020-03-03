@@ -1,6 +1,7 @@
-% Define some important variables
+% Defininition of some important variables
+
 s_TotalTimeSec = 30; %total number of seconds we are analysing 
-s_fs = 1000; % sample frequencyh
+s_fs = 1000; % sample frequency
 s_TimeSam = s_TotalTimeSec * s_fs; %total time in samples
 
 s_baselineStartTime = -7;
@@ -48,27 +49,29 @@ switch ChanVsSource
 end
 %% Loading Odor sets into memory
 
-for Load2Mem = 1:numel(FilesList)
-    if strcmp(ChanVsSource,'Channel')
-        subjectFiles{Load2Mem,1} = load([pathNameChan FilesListChanOdor(Load2Mem).name]);
-    else
-        subjectFiles{Load2Mem,1} = load([pathNameSource FilesListSourceOdor(Load2Mem).name]);
+if ~exist('subjectFilesOdor','var')
+    for Load2Mem = 1:numel(FilesList)
+        if strcmp(ChanVsSource,'Channel')
+            subjectFilesOdor{Load2Mem,1} = load([pathNameChan FilesListChanOdor(Load2Mem).name]);
+        else
+            subjectFilesOdor{Load2Mem,1} = load([pathNameSource FilesListSourceOdor(Load2Mem).name]);
+        end
     end
+    
 end
- 
 
 %% Select Which areas to compare 
 
 if strcmp(ChanVsSource,'Channel')
     FileTemp = load(FilesListChanOdor(1).name);
-    Sources = FileTemp.Channel.label;
+    Sources = FileTemp.Channel.Labels;
     %Asks for selection of multiple channels or sources to calculate the connectivity 
     [indx,tf] = listdlg('PromptString','Select channels to analyze:',...
         'ListSize',[400 400],...
         'ListString',Sources);
     scouts = Sources(indx);  
 else
-    FileTemp = subjectFiles{1};
+    FileTemp = subjectFilesOdor{1};
     Sources = string({FileTemp.Atlas.Scouts.Label});
     %Asks for selection of multiple channels or sources to calculate the connectivity
     [indx,tf] = listdlg('PromptString','Select sources to analyze:',...
@@ -79,20 +82,20 @@ end
 
 %% Odor datasets
 
-for subj = 1:length(subjectFiles)
+for subj = 2:length(subjectFilesOdor)
     
     switch ChanVsSource
         case 'Channel'
             %Set up datasets containing channel data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             file = load(FilesListChanOdor(subj).name);
-            s_NumChannels = length(file.Channel.number);
-            v_Time = file.Channel.times;
-            s_Trials = file.Channel.trials;
-            DataOdor = double(file.Channel.data);
+            s_NumChannels = length(file.Channel.Labels);
+            v_Time = file.Channel.Times;
+            s_Trials = file.Channel.Trials;
+            DataOdor = double(file.Channel.Data);
             
         case 'Source'
             %Set up datasets containing source data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            file = subjectFiles{subj};
+            file = subjectFilesOdor{subj};
             s_NumScouts = length(file.Atlas.Scouts); % Detect the number of scouts
             v_Time = file.Time(1:s_TimeSam);
             s_Trials = size(file.Value,2)/s_TimeSam;
@@ -112,7 +115,7 @@ for subj = 1:length(subjectFiles)
         ThetaPowerCohOdor(subj,:,:,:),...
         AlphaPowerCohOdor(subj,:,:,:),SpindlePowerCohOdor(subj,:,:,:),...
         BetaPowerCohOdor(subj,:,:,:),v_TimeAxisCoh,v_FreqAxisCoh]= ...
-        f_Connectivity(scouts,DataOdor,file,"Odor",s_TimeBeforeCero,...
+        f_Connectivity(scouts,DataOdor,file,'Odor',s_TimeBeforeCero,...
         s_baselineStartTime,s_baselineEndTime,ChanVsSource); 
 end
 
@@ -158,31 +161,32 @@ MeanSubjectSpindlesCohOdor = squeeze(mean(SpindlePowerCohOdor,1));
 % end
 
 %% Loading Placebo sets into memory
-
-for Load2Mem = 1:numel(FilesList)
-    if strcmp(ChanVsSource,'Channel')
-        subjectFiles{Load2Mem,1} = load([pathNameChan FilesListChanPlacebo(Load2Mem).name]);
-    else
-        subjectFiles{Load2Mem,1} = load([pathNameSource FilesListSourcePlacebo(Load2Mem).name]);
+if ~exist('subjectFilesPlac','var')
+    for Load2Mem = 1:numel(FilesList)
+        if strcmp(ChanVsSource,'Channel')
+            subjectFilesPlac{Load2Mem,1} = load([pathNameChan FilesListChanPlacebo(Load2Mem).name]);
+        else
+            subjectFilesPlac{Load2Mem,1} = load([pathNameSource FilesListSourcePlacebo(Load2Mem).name]);
+        end
     end
 end
 
 %% Placebo datasets
 
-for subj = 1:length(subjectFiles)
+for subj = 2:length(subjectFilesPlac)
     
     switch ChanVsSource
         case 'Channel'
             %Set up datasets containing channel data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             file = load(FilesListChanPlacebo(subj).name);
-            s_NumChannels = length(file.Channel.number);
-            v_Time = file.Channel.times;
-            s_Trials = file.Channel.trials;
-            DataPlacebo = double(file.Channel.data);
+            s_NumChannels = length(file.Channel.Labels);
+            v_Time = file.Channel.Times;
+            s_Trials = file.Channel.Trials;
+            DataPlacebo = double(file.Channel.Data);
             
         case 'Source'
             %Set up datasets containing source data %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            file = subjectFiles{subj};
+            file = subjectFilesPlac{subj};
             s_NumScouts = length(file.Atlas.Scouts); % Detect the number of scouts
             v_Time = file.Time(1:s_TimeSam);
             s_Trials = size(file.Value,2)/s_TimeSam;
@@ -202,7 +206,7 @@ for subj = 1:length(subjectFiles)
         ThetaPowerCohPlac(subj,:,:,:),...
         AlphaPowerCohPlac(subj,:,:,:),SpindlePowerCohPlac(subj,:,:,:),...
         BetaPowerCohPlac(subj,:,:,:),v_TimeAxisCoh,v_FreqAxisCoh]= ...
-        f_Connectivity(scouts,DataPlacebo,file,"Placebo",s_TimeBeforeCero,...
+        f_Connectivity(scouts,DataPlacebo,file,'Placebo',s_TimeBeforeCero,...
         s_baselineStartTime,s_baselineEndTime,ChanVsSource); 
 end
 
@@ -253,7 +257,7 @@ addpath('/home/andrea/Documents/MatlabFunctions/functions')
 
 for scout = 1:numel(scouts)
     
-    for scout2 = 45:46
+    for scout2 = 1:numel(scouts)
         if (scout2 ~= scout) && (scout<= ceil(numel(scouts)/2))            
             figure 
             
@@ -273,6 +277,7 @@ for scout = 1:numel(scouts)
             legend('Placebo','Odor')
             
             subplot(2,1,2)
+            
             shadedErrorBar(v_TimeAxisCoh,...
                 squeeze(permute(SpindlePowerCohOdor(:,scout,scout2,:),[2,3,1,4])),...
                 {@mean,@std},'lineprops', '-r');
@@ -288,8 +293,15 @@ for scout = 1:numel(scouts)
             legend('Placebo','Odor')
             
             ROI1 = scouts(scout); ROI2 = scouts(scout2);
-            ROI1 = strrep(ROI1,'_','\_'); ROI2 = strrep(ROI2,'_','\_'); 
+            ROI1 = strrep(ROI1,'_','\_'); ROI2 = strrep(ROI2,'_','\_');
+            ROIS = strcat(ROI1,{' vs '},ROI2);
             suptitle(strcat(ROI1,{' vs '},ROI2))
+            
+            f_WilcTest(ROIS,'Time','Coherence',...
+                'Odor','Placebo',...
+                squeeze(permute(DeltaPowerCohPlac(:,scout,scout2,:),[2,3,1,4])),...
+                squeeze(permute(SpindlePowerCohPlac(:,scout,scout2,:),[2,3,1,4])),...
+                v_TimeAxisCoh)
         end
     end
 end
